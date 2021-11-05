@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const express = require('express');
+const multer = require('multer');
 const mongoose = require('mongoose');
 const session = require('express-session');
 const MongoDBStore = require('connect-mongodb-session')(session);
@@ -33,13 +34,31 @@ const store = new MongoDBStore({
 });
 
 const csrfProtection = csrf();
+const fileStorage = multer.diskStorage({
+  destination: (req, file, callback) => {
+    callback(null, 'images')
+  },
+  filename: (req, file, callback) => {
+    callback(null, `${Date.now()}_${file.originalname}`)
+  }
+});
+const fileFilter = (req, file, callback) => {
+  if (['image/png', 'image/jpg', 'image/jpeg'].includes(file.mimetype)) {
+    callback(null, true);
+  } else {
+    callback(null, false);
+  }
+};
 
 app.set('view engine', 'ejs');
 app.set('views', 'views'); // default
 
 app.use(express.urlencoded({ extended: false }));
-// anything that tries to find a static file, Node.js will look in there
+app.use(multer({ storage: fileStorage, fileFilter }).single('image'));
+
 app.use(express.static(path.join(rootDir, 'public')));
+app.use('/images', express.static(path.join(rootDir, 'images')));
+
 app.use(session({ secret: 'mysecret', resave: false, saveUninitialized: false, store: store }));
 app.use(csrfProtection); // after the session
 app.use(flash()); // add stuff to session
@@ -73,10 +92,9 @@ app.use(errorController.get404);
 
 app.use((error, req, res, next) => {
   console.log('error middleware', error);
-  return res.render('500', {
+  return res.status(500).render('500', {
     pageTitle: "Error 500",
-    path: '',
-    isAuthenticated: false
+    path: ''
   });
 });
 

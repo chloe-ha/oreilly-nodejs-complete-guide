@@ -1,3 +1,8 @@
+const fs = require('fs');
+const path = require('path');
+
+const PDFDocument = require('pdfkit');
+
 const Product = require('../models/product');
 const Order = require('../models/order');
 
@@ -102,3 +107,56 @@ exports.getCheckout = (req, res, next) => {
     pageTitle: 'Checkout'
   });
 };
+
+exports.getInvoice = (req, res, next) => {
+  const orderId = req.params.orderId;
+  const invoiceFilename = 'invoice.pdf';
+  const invoicePath = path.join('data', 'invoices', invoiceFilename);
+
+  Order.findById(orderId).then(order => {
+    if (!order) {
+      return next(new Error('No order found'));
+    }
+    if (order.user.userId.toString() !== req.user._id.toString()) {
+      return next(new Error('Unauthorised'));
+    }
+    // Bad practice: read data, then serve it
+    // fs.readFile(invoicePath, (err, data) => {
+    //   if (err) {
+    //     return next(err);
+    //   }
+    //   res.setHeader('Content-Type', 'application/pdf');
+    //   res.setHeader('Content-Disposition', 'attachment; filename="' + invoiceFilename + '"');
+    //   // res.setHeader('Content-Disposition', 'inline');
+    //   res.send(data);
+    // });
+
+    // Better practice: stream data
+    // const file = fs.createReadStream(invoicePath);
+    // res.setHeader('Content-Type', 'application/pdf');
+    // res.setHeader('Content-Disposition', 'attachment; filename="' + invoiceFilename + '"');
+    // file.pipe(res);
+
+    // Create our own PDF document
+    const pdfDoc = new PDFDocument();
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="' + invoiceFilename + '"');
+    pdfDoc.pipe(fs.createWriteStream(invoicePath));
+    pdfDoc.pipe(res);
+
+    pdfDoc.fontSize(26).text('Invoice', {
+      underline: true
+    });
+    pdfDoc.fontSize(14).text(`Order ${orderId}`);
+    pdfDoc.text('----------------------');
+    let totalPrice = 0;
+    order.products.forEach(product => {
+      const productPrice = product.product.price * product.quantity;
+      pdfDoc.text(`${product.product.title}: ${product.product.price} x ${product.quantity} = ${productPrice}`);
+      totalPrice += productPrice;
+    });
+    pdfDoc.text(`Total: ${totalPrice}`);
+
+    pdfDoc.end();
+  }).catch(err => next(err));
+}
