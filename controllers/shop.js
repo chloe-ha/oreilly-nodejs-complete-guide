@@ -6,26 +6,54 @@ const PDFDocument = require('pdfkit');
 const Product = require('../models/product');
 const Order = require('../models/order');
 
+const ITEMS_PER_PAGE = 2;
+
 module.exports.getIndex = (req, res, next) => {
-  Product.find()
-    .then((products) => {
-      res.render('shop/index', {
-        prods: products,
-        pageTitle: 'Shop',
-        path: '/'
-      });
+  const page = Number(req.query.page) || 1;
+
+  Product.find().countDocuments()
+    .then(count => {
+      return Product.find()
+        .skip((page - 1) * ITEMS_PER_PAGE)
+        .limit(ITEMS_PER_PAGE)
+        .then((products) => {
+          res.render('shop/index', {
+            pageTitle: 'Shop',
+            path: '/',
+            prods: products,
+            currentPage: page,
+            hasNextPage: ITEMS_PER_PAGE * page < count,
+            hasPreviousPage: page > 1,
+            nextPage: page + 1,
+            previousPage: page - 1,
+            lastPage: Math.ceil(count / ITEMS_PER_PAGE)
+          });
+        })
     })
     .catch(err => next(err));
 };
 
 module.exports.getProducts = (req, res, next) => {
-  Product.find()
-    .then(products => {
-      res.render('shop/product-list', {
-        prods: products,
-        pageTitle: 'All Products',
-        path: '/products'
-      });
+  const page = Number(req.query.page) || 1;
+
+  Product.find().countDocuments()
+    .then(count => {
+      return Product.find()
+        .skip((page - 1) * ITEMS_PER_PAGE)
+        .limit(ITEMS_PER_PAGE)
+        .then((products) => {
+          res.render('shop/product-list', {
+            pageTitle: 'All Products',
+            path: '/products',
+            prods: products,
+            currentPage: page,
+            hasNextPage: ITEMS_PER_PAGE * page < count,
+            hasPreviousPage: page > 1,
+            nextPage: page + 1,
+            previousPage: page - 1,
+            lastPage: Math.ceil(count / ITEMS_PER_PAGE)
+          });
+        })
     })
     .catch(err => next(err));
 };
