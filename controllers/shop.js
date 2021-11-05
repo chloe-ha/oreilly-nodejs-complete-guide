@@ -60,6 +60,7 @@ module.exports.getProducts = (req, res, next) => {
 
 module.exports.getProduct = (req, res, next) => {
   const prodId = req.params.productId;
+
   Product.findById(prodId)
     .then((product) => {
       res.render('shop/product-detail', {
@@ -83,7 +84,6 @@ module.exports.getCart = (req, res, next) => {
     })
     .catch(err => next(err));
 };
-
 
 exports.postCart = (req, res, next) => {
   const prodId = req.body.productId;
