@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const PDFDocument = require('pdfkit');
+const stripe = require('stripe')('sk_test_51Jsc7zLiqU3D7wwaeqDdpqKKJVDM6OO5NUHUxSzmAyZ2Vi62ZuKZBS0VnY0rpPnL5jBPyHwTQMmHffWlAfMzD4D200WETj89uD');
 
 const Product = require('../models/product');
 const Order = require('../models/order');
@@ -100,6 +101,22 @@ exports.postCartDeleteProduct = (req, res, next) => {
     .catch(err => next(err));
 };
 
+exports.getCheckout = (req, res, next) => {
+  req.user
+    .populate('cart.items.productId')
+    .then(user => {
+      const products = user.cart.items;
+      const total = products.reduce((prev, curr) => prev + curr.productId.price * curr.quantity, 0);
+      return res.render('shop/checkout', {
+        path: '/checkout',
+        pageTitle: 'Checkout',
+        products: products,
+        totalSum: total
+      });
+    })
+    .catch(err => next(err));
+};
+
 exports.getOrders = (req, res, next) => {
   Order.find({ userId: req.user._id })
     .then(orders => {
@@ -113,27 +130,35 @@ exports.getOrders = (req, res, next) => {
 };
 
 exports.postOrder = (req, res, next) => {
+  const token = req.body.stripeToken;
+  let totalSum = 0;
+
   req.user
     .populate('cart.items.productId')
     .then(user => {
+      const products = user.cart.items;
+      totalSum = products.reduce((prev, curr) => prev + curr.productId.price * curr.quantity, 0);
+
       return new Order({
         user: { email: user.email, userId: user },
-        products: user.cart.items.map(item => ({
+        products: products.map(item => ({
           product: item.productId._doc,
           quantity: item.quantity
         }))
       }).save()
     })
+    .then(result => {
+      const charge = stripe.charges.create({
+        amount: Number((totalSum * 100).toFixed(0)),
+        currency: 'aud',
+        description: 'Demo Order',
+        source: token,
+        metadata: { order_id: result._id.toString() }
+      });
+    })
     .then(() => req.user.clearCart())
     .then(() => res.redirect('/orders'))
     .catch(err => next(err));
-};
-
-exports.getCheckout = (req, res, next) => {
-  res.render('shop/checkout', {
-    path: '/checkout',
-    pageTitle: 'Checkout'
-  });
 };
 
 exports.getInvoice = (req, res, next) => {
@@ -187,4 +212,4 @@ exports.getInvoice = (req, res, next) => {
 
     pdfDoc.end();
   }).catch(err => next(err));
-}
+};
