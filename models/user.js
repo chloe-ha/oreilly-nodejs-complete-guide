@@ -7,16 +7,20 @@ const userSchema = new Schema({
   resetToken: String,
   resetTokenExpiry: Date,
   cart: {
-    items: [{
-      productId: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
-      quantity: { type: Number, required: true }
-    }]
-  }
+    items: [
+      {
+        productId: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
+        quantity: { type: Number, required: true },
+      },
+    ],
+  },
 });
 
 // will be called on a User. Not anonymous function, so this is the User instance
-userSchema.methods.addToCart = function(product) {
-  const cartProductIndex = this.cart.items.findIndex(i => i.productId.toString() === product._id.toString());
+userSchema.methods.addToCart = function (product) {
+  const cartProductIndex = this.cart.items.findIndex(
+    (i) => i.productId.toString() === product._id.toString(),
+  );
   if (cartProductIndex === -1) {
     const updatedCart = { items: [...this.cart.items, { productId: product._id, quantity: 1 }] };
     this.cart = updatedCart;
@@ -28,12 +32,14 @@ userSchema.methods.addToCart = function(product) {
     return this.save();
   }
 };
-userSchema.methods.removeFromCart = function(productId) {
-  const updatedCartItems = this.cart.items.filter(i => i.productId.toString() !== productId.toString());
+userSchema.methods.removeFromCart = function (productId) {
+  const updatedCartItems = this.cart.items.filter(
+    (i) => i.productId.toString() !== productId.toString(),
+  );
   this.cart = { items: updatedCartItems };
   return this.save();
 };
-userSchema.methods.clearCart = function() {
+userSchema.methods.clearCart = function () {
   this.cart = { items: [] };
   return this.save();
 };

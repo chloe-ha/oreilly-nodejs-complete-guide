@@ -8,6 +8,8 @@ const session = require('express-session');
 const MongoDBStore = require('connect-mongodb-session')(session);
 const csrf = require('csurf');
 const flash = require('connect-flash');
+const helmet = require('helmet');
+const compression = require('compression');
 const morgan = require('morgan');
 
 const rootDir = require('./utils/path');
@@ -16,10 +18,7 @@ const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const shopRoutes = require('./routes/shop');
 
-const accessLogStream = fs.createWriteStream(
-  path.join(__dirname, 'access.log'),
-  { flags: 'a' }
-);
+const accessLogStream = fs.createWriteStream(path.join(__dirname, 'access.log'), { flags: 'a' });
 
 const errorController = require('./controllers/error');
 const shopController = require('./controllers/shop');
@@ -27,22 +26,25 @@ const isAuth = require('./middleware/is-auth');
 
 const User = require('./models/user');
 
-const MONGODB_URI = 'mongodb+srv://user:user@cluster0.psshf.mongodb.net/shop';
+// console.log("NODE_ENV", process.env.NODE_ENV);
+// express will do prod things when it sees NODE_ENV = production
+
+const MONGODB_URI = `mongodb+srv://${process.env.MONGO_USER}:${process.env.MONGO_PASSWORD}@cluster0.psshf.mongodb.net/${process.env.MONGO_DEFAULT_DB}`;
 
 const app = express();
 const store = new MongoDBStore({
   uri: MONGODB_URI,
-  collection: 'sessions'
+  collection: 'sessions',
 });
 
 const csrfProtection = csrf();
 const fileStorage = multer.diskStorage({
   destination: (req, file, callback) => {
-    callback(null, 'images')
+    callback(null, 'images');
   },
   filename: (req, file, callback) => {
-    callback(null, `${Date.now()}_${file.originalname}`)
-  }
+    callback(null, `${Date.now()}_${file.originalname}`);
+  },
 });
 const fileFilter = (req, file, callback) => {
   if (['image/png', 'image/jpg', 'image/jpeg'].includes(file.mimetype)) {
@@ -61,8 +63,17 @@ app.use(multer({ storage: fileStorage, fileFilter }).single('image'));
 app.use(express.static(path.join(rootDir, 'public')));
 app.use('/images', express.static(path.join(rootDir, 'images')));
 
-app.use(session({ secret: 'mysecret', resave: false, saveUninitialized: false, store: store }));
+app.use(
+  session({
+    secret: 'mysecret',
+    resave: false,
+    saveUninitialized: false,
+    store: store,
+  }),
+);
 app.use(flash());
+app.use(helmet());
+app.use(compression());
 app.use(morgan('combined', { stream: accessLogStream }));
 
 app.use((req, res, next) => {
@@ -76,11 +87,11 @@ app.use((req, res, next) => {
     return next();
   }
   User.findById(req.session.user._id)
-    .then(user => {
+    .then((user) => {
       req.user = user;
       next();
     })
-    .catch(err => next(err)); // <= this next is needed to lead to error handling middleware
+    .catch((err) => next(err)); // <= this next is needed to lead to error handling middleware
 });
 
 app.post('/create-order', isAuth, shopController.postOrder);
@@ -100,14 +111,15 @@ app.use(errorController.get404);
 app.use((error, req, res, next) => {
   console.log('error middleware', error);
   return res.status(500).render('500', {
-    pageTitle: "Error 500",
-    path: ''
+    pageTitle: 'Error 500',
+    path: '',
   });
 });
 
-mongoose.connect(MONGODB_URI, { })
+mongoose
+  .connect(MONGODB_URI, {})
   .then(() => {
     console.log('Connected to MongoDB');
-    app.listen(4000);
+    app.listen(process.env.PORT || 8080);
   })
-  .catch(err => console.log(err));
+  .catch((err) => console.log(err));

@@ -1,10 +1,16 @@
 {
   "main": "app.js",
+  "engines": {
+    "node": "16.6.1"
+  },
   "scripts": {
-    "start": "nodemon"
+    "start": "NODE_ENV=production MONGO_USER=user MONGO_PASSWORD=user MONGO_DEFAULT_DB=shop STRIPE_KEY=sk_test_51Jsc7zLiqU3D7wwaeqDdpqKKJVDM6OO5NUHUxSzmAyZ2Vi62ZuKZBS0VnY0rpPnL5jBPyHwTQMmHffWlAfMzD4D200WETj89uD node app.js",
+    "start:dev": "nodemon",
+    "format": "prettier --write './**/*.js'"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
+    "compression": "^1.7.4",
     "connect-flash": "^0.1.1",
     "connect-mongodb-session": "^3.1.1",
     "csurf": "^1.11.0",
@@ -12,6 +18,7 @@
     "express": "^4.17.1",
     "express-session": "^1.17.2",
     "express-validator": "^6.12.2",
+    "helmet": "^4.6.0",
     "mongodb": "^4.1.2",
     "mongoose": "^6.0.9",
     "morgan": "^1.10.0",
@@ -22,5 +29,8 @@
     "pdfkit": "^0.13.0",
     "sequelize": "^6.6.5",
     "stripe": "^8.186.1"
+  },
+  "devDependencies": {
+    "prettier": "^2.4.1"
   }
 }

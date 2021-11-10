@@ -9,19 +9,11 @@ const router = express.Router();
 router.get('/login', authController.getLogin);
 router.post(
   '/login',
-  [
-    body('email')
-      .isEmail()
-      .withMessage('Please enter a valid email address.')
-      .normalizeEmail()
-  ],
-  authController.postLogin
+  [body('email').isEmail().withMessage('Please enter a valid email address.').normalizeEmail()],
+  authController.postLogin,
 );
 router.get('/signup', authController.getSignup);
-router.post(
-  '/signup',
-  authController.postSignup
-);
+router.post('/signup', authController.postSignup);
 router.post('/logout', authController.postLogout);
 router.get('/reset', authController.getReset);
 router.post('/reset', authController.postReset);

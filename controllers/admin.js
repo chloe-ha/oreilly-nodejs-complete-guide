@@ -6,14 +6,14 @@ const Product = require('../models/product');
 
 module.exports.getProducts = (req, res, next) => {
   Product.find({ userId: req.user._id })
-    .then(products => {
+    .then((products) => {
       res.render('admin/products', {
         prods: products,
         pageTitle: 'Products',
-        path: '/admin/products'
+        path: '/admin/products',
       });
     })
-    .catch(err => next(err));
+    .catch((err) => next(err));
 };
 
 module.exports.getAddProduct = (req, res, next) => {
@@ -26,7 +26,7 @@ module.exports.getAddProduct = (req, res, next) => {
     editing: false,
     hasError: false,
     errorMessage: null,
-    validationErrors: []
+    validationErrors: [],
   });
 };
 
@@ -44,10 +44,10 @@ module.exports.postAddProduct = (req, res, next) => {
       product: {
         title: title,
         price: price,
-        description: description
+        description: description,
       },
       errorMessage: 'Please upload jpg, jpeg or png file',
-      validationErrors: []
+      validationErrors: [],
     });
   }
 
@@ -60,10 +60,10 @@ module.exports.postAddProduct = (req, res, next) => {
       product: {
         title: title,
         price: price,
-        description: description
+        description: description,
       },
       errorMessage: errors.array()[0].msg,
-      validationErrors: errors.array()
+      validationErrors: errors.array(),
     });
   }
 
@@ -72,7 +72,7 @@ module.exports.postAddProduct = (req, res, next) => {
   new Product({ title, price, description, imageUrl, userId: req.user })
     .save()
     .then(() => res.redirect('/'))
-    .catch(err => next(err));
+    .catch((err) => next(err));
 };
 
 exports.getEditProduct = (req, res, next) => {
@@ -81,7 +81,7 @@ exports.getEditProduct = (req, res, next) => {
     return res.redirect('/');
   }
   const prodId = req.params.productId;
-  Product.findOne({ _id: prodId, userId: req.user._id }).then(product => {
+  Product.findOne({ _id: prodId, userId: req.user._id }).then((product) => {
     if (!product) {
       return res.redirect('/admin/products');
     }
@@ -92,7 +92,7 @@ exports.getEditProduct = (req, res, next) => {
       product: product,
       hasError: false,
       errorMessage: null,
-      validationErrors: []
+      validationErrors: [],
     });
   });
 };
@@ -113,42 +113,43 @@ module.exports.postEditProduct = (req, res, next) => {
         title: title,
         price: price,
         description: description,
-        _id: productId
+        _id: productId,
       },
       errorMessage: errors.array()[0].msg,
-      validationErrors: errors.array()
+      validationErrors: errors.array(),
     });
   }
 
-  Product.findById(productId).then(product => {
-    if (product.userId.toString() !== req.user._id.toString()) {
-      return;
-    }
-    product.title = title;
-    product.price = price;
-    product.description = description;
-    if (image) {
-      fileHelper.deleteFile(product.imageUrl);
-      product.imageUrl = image.path;
-    }
-    return product.save();
-  })
+  Product.findById(productId)
+    .then((product) => {
+      if (product.userId.toString() !== req.user._id.toString()) {
+        return;
+      }
+      product.title = title;
+      product.price = price;
+      product.description = description;
+      if (image) {
+        fileHelper.deleteFile(product.imageUrl);
+        product.imageUrl = image.path;
+      }
+      return product.save();
+    })
     .then(() => res.redirect('/admin/products'))
-    .catch(err => next(err));
+    .catch((err) => next(err));
 };
 
 module.exports.deleteProduct = (req, res, next) => {
   const prodId = req.params.productId;
   Product.findById(prodId)
-    .then(product => {
+    .then((product) => {
       if (!product) {
         return next(new Error('Product not found'));
       }
       fileHelper.deleteFile(product.imageUrl);
-      return Product.deleteOne({ _id: prodId, userId: req.user._id })
+      return Product.deleteOne({ _id: prodId, userId: req.user._id });
     })
     .then(() => {
       res.status(200).json({ message: 'Success!' });
     })
-    .catch(err => res.status(500).json({ message: err }));
+    .catch((err) => res.status(500).json({ message: err }));
 };
